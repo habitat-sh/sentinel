@@ -148,15 +148,6 @@ module Sentinel
         )
 
         Celluloid::Actor[:processor].test(real_pr)
-
-
-#         Sentinel.github.issues.comments.create(
-#           pr["repository"]["owner"]["login"],
-#           pr["repository"]["name"],
-#           pr["issue"]["number"],
-#           body: "Excellent @#{pr["comment"]["user"]["login"]}! It always makes me feel nice when humans approve of one anothers work. I'm merging this PR now.\n\nI just want you and the contributor to answer me one question:\n\n![gif-keyboard-3280869874741411265](https://cloud.githubusercontent.com/assets/4304/17755674/1e577b82-6490-11e6-96b7-1663d283c824.gif)"
-#         )
-# 
       end
 
       def force_pr(pr)
@@ -312,6 +303,37 @@ module Sentinel
       pr = JSON.parse(payload_body)
       pp pr if ENV["DEBUG"]
 
+      if pr["action"] == "opened" || pr["action"] == "synchronize" || pr["action"] == "reopened"
+        puts "Checking #{pr["pull_request"]["head"]["repo"]["name"]} ##{pr["number"]} for DCO"
+        Sentinel.github.pull_requests.commits(
+          pr["repository"]["owner"]["login"],
+          pr["repository"]["name"],
+          pr["pull_request"]["number"]
+        ).each do |commit|
+          if commit[:commit][:message] !~ /Signed-off-by: .+ <.+>/
+            puts "Flagging SHA #{commit["sha"]} as failed; no DCO"
+            Sentinel.github.repos.statuses.create(
+              pr["repository"]["owner"]["login"],
+              pr["repository"]["name"],
+              commit["sha"],
+              context: "DCO",
+              state: "failure",
+              description: "This commit does not have a DCO Signed-off-by line"
+            )
+          else
+            puts "Flagging SHA #{commit["sha"]} as succeeded; has DCO"
+            Sentinel.github.repos.statuses.create(
+              pr["repository"]["owner"]["login"],
+              pr["repository"]["name"],
+              commit["sha"],
+              context: "DCO",
+              state: "success",
+              description: "This commit has a DCO Signed-off-by line"
+            )
+          end
+        end
+      end
+
       if pr.has_key?("pull_request") && pr["action"] == "opened"
         Hub.opened_pr(pr)
       elsif pr.has_key?("comment") && pr.has_key?("issue") && (pr["action"] == "created" || pr["action"] == "edited")
@@ -358,4 +380,3 @@ Dir.mkdir(CACHE, 0700) unless Dir.exists?(CACHE)
 
 Sentinel::Processor.supervise(:as => :processor)
 
-Sentinel::Server.run!

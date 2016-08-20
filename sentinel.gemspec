@@ -5,7 +5,7 @@ require 'sentinel/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "sentinel"
-  spec.version       = Dcob::VERSION
+  spec.version       = Sentinel::VERSION
   spec.authors       = ["Adam Jacob"]
   spec.email         = ["adam@chef.io"]
 
@@ -31,6 +31,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "rspec"
   spec.add_development_dependency "pry"
+  spec.add_development_dependency "rack-test"
 
   spec.add_dependency "github_api"
   spec.add_dependency "sinatra"
