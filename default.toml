@@ -1,0 +1,28 @@
+# Github login
+login = "change_me_to_you"
+# Github secret token
+secret_token = "so_secret"
+# Github access token
+access_token = "much_token"
+# Travis token
+travis_token = "so_travis"
+# User to ssh to github as, for cloning the repos
+ssh_user = "change_me_to_you"
+# SSH Private Key for that user, as a filesystem path
+ssh_private_key = "/hab/sentinels/files/ssh-rsa"
+# SSH Public Key for that user, as a filesystem path
+ssh_public_key = "/hab/sentinels/files/ssh-rsa.pub"
+
+###
+# Define repositories by name, with a list of github id's who
+# are allowed to issue commands to the bot
+# [repo.testerton]
+# approvers = [
+#   "dparfitt",
+#   "jtimberman",
+#   "jdunn",
+#   "adamhjk",
+# ]
+
+
+

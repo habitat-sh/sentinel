@@ -40,4 +40,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "celluloid"
   spec.add_dependency "mixlib-shellout"
   spec.add_dependency "travis"
+  spec.add_dependency "thin"
 end
