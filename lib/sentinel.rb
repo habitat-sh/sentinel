@@ -232,6 +232,7 @@ module Sentinel
 
 
   class Server < Sinatra::Base
+    set :bind, "0.0.0.0"
     post '/travis' do
       build = JSON.parse(params["payload"])
 
