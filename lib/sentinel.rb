@@ -350,12 +350,12 @@ module Sentinel
   end
 end
 
-if !File.exists?("config.toml")
+if !File.exists?("/hab/svc/sentinel/config.toml")
   puts "You need to provide a config.toml"
   exit 1
 end
 
-CONFIG = TOML.load_file("config.toml")
+CONFIG = TOML.load_file("/hab/svc/sentinel/config.toml")
 config = CONFIG
 if !config["cfg"]["login"]
   puts "You must specify cfg.login in config.toml"
