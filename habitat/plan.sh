@@ -24,7 +24,7 @@ pkg_build_deps=(
   core/pkg-config
 )
 pkg_bin_dirs=(bin)
-pkg_svc_run="bin/sentinels -o 0.0.0.0"
+pkg_svc_run="sentinels -o 0.0.0.0"
 pkg_expose=(4567)
 
 do_download() {
@@ -45,18 +45,19 @@ do_build() {
 
 do_install () {
   # Create a Gemfile with what we need
-  cat > Gemfile <<GEMFILE
-source 'https://rubygems.org'
-gem 'sentinel', path: '$pkg_prefix'
-GEMFILE
   export BUNDLE_SILENCE_ROOT_WARNING=1 GEM_PATH
   GEM_PATH="$(pkg_path_for core/bundler)"
-  cd $PLAN_CONTEXT/../
-  rsync -vaP --exclude "cache" --exclude ".git" --exclude "vendor" --exclude "config.toml" --exclude "results" . $pkg_prefix
-  bundle install --jobs "$(nproc)" --retry 5 --standalone \
+    cat > Gemfile <<GEMFILE
+  source 'https://rubygems.org'
+  gem 'sentinel', git: '$PLAN_CONTEXT/../'
+GEMFILE
+  # mkdir -p $pkg_prefix/sentinel
+  # rsync -vaP --exclude .bundle --exclude "cache" --exclude ".git" --exclude "vendor" --exclude "config.toml" --exclude "results" $PLAN_CONTEXT/../ $pkg_prefix/sentinel
+  bundle install --jobs "$(nproc)" --retry 5 \
     --path "$pkg_prefix/bundle" \
     --shebang=$(pkg_path_for ruby)/bin/ruby \
-    --binstubs "$pkg_prefix/bin"
+    --binstubs=$pkg_prefix/bin \
+    --standalone
   pkg_lib_dirs+=$(find $pkg_prefix/bundle | grep '**/lib' | grep '\.so' | xargs dirname | sort -u)
 
   fix_interpreter "$pkg_prefix/bin/*" core/coreutils bin/env

@@ -1,3 +1,3 @@
-require "dcob"
+require "sentinel"
 
-run Dcob::Server
+run Sentinel::Server

@@ -375,7 +375,7 @@ else
 end
 
 TOP = File.expand_path(File.join(File.dirname(__FILE__), ".."))
-CACHE = File.join(TOP, "cache")
+CACHE = "/hab/svc/sentinel/files"
 
 Dir.mkdir(CACHE, 0700) unless Dir.exists?(CACHE)
 
