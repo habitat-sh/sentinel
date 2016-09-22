@@ -7,6 +7,9 @@ require "toml"
 require "celluloid/current"
 require "mixlib/shellout"
 require "github_api"
+require "openssl"
+require "base64"
+require "faraday"
 
 module Sentinel
   def self.github
@@ -233,20 +236,36 @@ module Sentinel
 
   class Server < Sinatra::Base
     set :bind, "0.0.0.0"
+
+    def verify_travis(payload, signature)
+      conn = Faraday.new(:url => "https://api.travis-ci.org") do |faraday|
+        faraday.adapter Faraday.default_adapter
+      end
+      response = conn.get '/config'
+      public_key = JSON.parse(response.body)["config"]["notifications"]["webhook"]["public_key"]
+      pkey = OpenSSL::PKey::RSA.new(public_key)
+      if pkey.verify(
+          OpenSSL::Digest::SHA1.new,
+          Base64.decode64(signature),
+          payload.to_json
+      )
+        true
+      else
+        false
+      end
+    end
+
     post '/travis' do
       build = JSON.parse(params["payload"])
+      signature = request.env["HTTP_SIGNATURE"]
+      payload = request_body.fetch('payload', '')
 
       pp build if ENV["DEBUG"]
+      pp signature if ENV["DEBUG"]
 
-      # Some day, Travis CI will fix their web hook authentication. Until that day...
-      #
-      #repo_slug = request.env["HTTP_TRAVIS_REPO_SLUG"]
-      #digest = Digest::SHA256.new.update("#{request.env["HTTP_TRAVIS_REPO_SLUG"]}#{CONFIG["cfg"]["travis_token"]}")
-
-      digest = Digest::SHA256.new.update("#{request.env["HTTP_TRAVIS_REPO_SLUG"]}")
-      if ! Rack::Utils.secure_compare(digest.to_s, request.env['HTTP_AUTHORIZATION'])
-        puts "Travis signatures don't match #{digest.to_s} #{request.env['HTTP_AUTHORIZATION']}"
-        return halt 500, "Travis signatures didn't match!"
+      if !verify_travis(payload, signature)
+        puts "Travis signature doesn't match - #{signature} #{build}"
+        return halt 500, "Travis signature could not be verified"
       end
 
       if build['type'] == "pull_request"
