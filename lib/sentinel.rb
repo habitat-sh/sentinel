@@ -258,12 +258,11 @@ module Sentinel
     post '/travis' do
       build = JSON.parse(params["payload"])
       signature = request.env["HTTP_SIGNATURE"]
-      payload = JSON.parse(request.body.read).fetch('payload', '')
 
       pp build if ENV["DEBUG"]
       pp signature if ENV["DEBUG"]
 
-      if !verify_travis(payload, signature)
+      if !verify_travis(build, signature)
         puts "Travis signature doesn't match - #{signature} #{build}"
         return halt 500, "Travis signature could not be verified"
       end
