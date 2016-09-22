@@ -312,9 +312,6 @@ module Sentinel
       "Please Drive Through!"
     end
 
-    def verify_travis
-    end
-
     post '/payload' do
       payload_body = request.body.read
       signature = 'sha1=' + OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), SECRET_TOKEN, payload_body)
