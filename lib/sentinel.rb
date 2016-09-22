@@ -258,7 +258,7 @@ module Sentinel
     post '/travis' do
       build = JSON.parse(params["payload"])
       signature = request.env["HTTP_SIGNATURE"]
-      payload = request_body.fetch('payload', '')
+      payload = JSON.parse(request.body.read).fetch('payload', '')
 
       pp build if ENV["DEBUG"]
       pp signature if ENV["DEBUG"]
