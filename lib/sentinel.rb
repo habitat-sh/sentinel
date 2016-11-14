@@ -19,6 +19,56 @@ module Sentinel
     end
   end
 
+  class WWW
+    def initialize(pr, branch)
+      @pr = pr
+      @branch = branch
+    end
+
+    def path
+      name = @pr["base"]["repo"]["name"]
+      path = File.join(CACHE, name)
+    end
+
+    def www_path
+      File.join(path, "www")
+    end
+
+    def modified?
+      mb = Mixlib::ShellOut.new("git merge-base #{@branch} master", :cwd => path)
+      mb.run_command
+      mb.error!
+
+      cmd = Mixlib::ShellOut.new("git diff --name-only #{@branch} #{mb.stdout.chomp}", :cwd => path)
+      cmd.run_command
+      cmd.error!
+
+      cmd.stdout.split("\n").any? { |f| f =~ /www\// }
+    end
+
+    def configured?
+      CONFIG["cfg"]["aws_access_key_id"] &&
+        CONFIG["cfg"]["aws_secret_access_key"] &&
+        CONFIG["cfg"]["fastly_api_key"] &&
+        CONFIG["cfg"]["fastly_service_key"]
+    end
+
+    def env
+      {
+        "AWS_ACCESS_KEY_ID" => CONFIG["cfg"]["aws_access_key_id"],
+        "AWS_SECRET_ACCESS_KEY" => CONFIG["cfg"]["aws_secret_access_key"],
+        "FASTLY_API_KEY" => CONFIG["cfg"]["fastly_api_key"],
+        "FASTLY_SERVICE_KEY" => CONFIG["cfg"]["fastly_service_key"]
+      }
+    end
+
+    def deploy!
+      cmd = Mixlib::ShellOut.new("make deploy", :env => env, :cwd => www_path)
+      cmd.run_command
+      cmd.error!
+    end
+  end
+
   class Git
     class << self
       def env
@@ -81,7 +131,6 @@ module Sentinel
         cmd.run_command
         cmd.error!
       end
-
     end
   end
 
@@ -166,7 +215,7 @@ module Sentinel
         merge(pr)
       end
 
-      def merge_real_pr(pr)
+      def merge_real_pr(pr, testing_branch)
         begin
           owner = pr["base"]["repo"]["owner"]["login"]
           repo = pr["base"]["repo"]["name"]
@@ -182,7 +231,6 @@ module Sentinel
             pr["number"],
             commit_message: "Approved by: @#{approver}\nMerged by: The Sentinels"
           )
-
         rescue => e
           Sentinel.github.issues.comments.create(
             pr["repository"]["owner"]["login"],
@@ -191,6 +239,26 @@ module Sentinel
             body: "Sorry. I had a problem merging this pull request. The error was:\n\n```ruby\n#{e}\n```\n\n![Oops](https://cloud.githubusercontent.com/assets/4304/17756537/583f4ba4-6495-11e6-97c8-0c22ceaf7e63.gif)"
           )
         end
+
+        begin
+          puts "Checking to see if the web site needs to be deployed"
+          www = Sentinel::WWW.new(pr, testing_branch)
+
+          if www.modified?
+            puts "The web site was modified. I'm going to try to deploy it now."
+
+            if www.configured?
+              www.deploy!
+            else
+              puts "I'd like to deploy the web site for you right now but I'm missing the 4 ENV vars necessary to do so."
+            end
+          else
+            puts "The web site was not modified. Moving on."
+          end
+        rescue => e
+          puts "Failed to deploy the web site because #{e.inspect}"
+        end
+
         begin
           puts "Deleting integration branch"
           Sentinel.github.git.references.delete(
@@ -269,7 +337,7 @@ module Sentinel
 
       if build['type'] == "pull_request"
         puts "Nothing to do on a PR travis job"
-        return "Nothing to do on PR" 
+        return "Nothing to do on PR"
       end
 
       build["branch"] =~ /^sentinel\/#{build["repository"]["owner_name"]}\/#{build["repository"]["name"]}\/(\d+)/
@@ -288,7 +356,7 @@ module Sentinel
            build["repository"]["name"],
            pr
          )
-         Hub.merge_real_pr(real_pr)
+         Hub.merge_real_pr(real_pr, build["branch"])
         elsif build["result"] == 1
           Sentinel.github.issues.comments.create(
             build["repository"]["owner_name"],
@@ -395,4 +463,3 @@ CACHE = "/hab/svc/sentinel/data"
 Dir.mkdir(CACHE, 0700) unless Dir.exists?(CACHE)
 
 Sentinel::Processor.supervise(:as => :processor)
-
