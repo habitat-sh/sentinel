@@ -12,14 +12,6 @@ ssh_user = "change_me_to_you"
 ssh_private_key = "/hab/sentinels/files/ssh-rsa"
 # SSH Public Key for that user, as a filesystem path
 ssh_public_key = "/hab/sentinels/files/ssh-rsa.pub"
-# AWS_ACCESS_KEY_ID for deploying the web site
-aws_access_key_id = "this"
-# AWS_SECRET_ACCESS_KEY for deploying the web site
-aws_secret_access_key = "is"
-# FASTLY_API_KEY for invalidating the fastly cache of the web site
-fastly_api_key = "all"
-# FASTLY_SERVICE_KEY for doing the fastly stuff for the web site
-fastly_service_key = "fake"
 
 ###
 # Define repositories by name, with a list of github id's who
@@ -31,3 +23,6 @@ fastly_service_key = "fake"
 #   "jdunn",
 #   "adamhjk",
 # ]
+
+
+
