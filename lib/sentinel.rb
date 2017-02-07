@@ -394,6 +394,6 @@ end
 TOP = File.expand_path(File.join(File.dirname(__FILE__), '..'))
 CACHE = '/hab/svc/sentinel/data'.freeze
 
-Dir.mkdir(CACHE, 0o700) unless Dir.exist?(CACHE)
+Dir.mkdir(CACHE, 0700) unless Dir.exist?(CACHE)
 
 Sentinel::Processor.supervise(as: :processor)

@@ -15,3 +15,6 @@ Metrics/ModuleLength:
 
 Metrics/ClassLength:
   Enabled: false
+
+NumericLiteralPrefix:
+  Enabled: false
