@@ -5,5 +5,3 @@ describe Sentinel do
     expect(Sentinel::VERSION).not_to be nil
   end
 end
-
-

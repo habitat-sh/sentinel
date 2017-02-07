@@ -1,3 +1,3 @@
-require "sentinel"
+require 'sentinel'
 
 run Sentinel::Server

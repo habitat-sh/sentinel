@@ -1,5 +1,4 @@
 #!/usr/bin/env ruby
 
-require "sentinel"
+require 'sentinel'
 Sentinel::Server.run!
-
