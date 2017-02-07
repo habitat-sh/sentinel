@@ -30,7 +30,7 @@ module Sentinel
       def clone(url, path)
         if !Dir.exist?(path)
           puts "Cloning repository #{path} from #{url}"
-          clone = Mixlib::ShellOut.new("git clone #{url} #{path}", env: env)
+          clone = Mixlib::ShellOut.new("git clone #{url} #{path}", :env => env)
           clone.run_command
           clone.error!
         else
@@ -40,14 +40,14 @@ module Sentinel
 
       def checkout(path, branch)
         puts "Checking out #{branch} for #{path}"
-        cmd = Mixlib::ShellOut.new("git checkout #{branch}", cwd: path)
+        cmd = Mixlib::ShellOut.new("git checkout #{branch}", :cwd => path)
         cmd.run_command
         cmd.error!
       end
 
       def branch(path, branch)
         puts "Creating #{branch} for #{path}"
-        cmd = Mixlib::ShellOut.new("git checkout -b #{branch}", cwd: path)
+        cmd = Mixlib::ShellOut.new("git checkout -b #{branch}", :cwd => path)
         cmd.run_command
         begin
           cmd.error!
@@ -58,28 +58,28 @@ module Sentinel
 
       def fetch(path, number)
         puts 'Fetching the merge commit'
-        cmd = Mixlib::ShellOut.new("git fetch origin pull/#{number}/merge", env: env, cwd: path)
+        cmd = Mixlib::ShellOut.new("git fetch origin pull/#{number}/merge", :env => env, :cwd => path)
         cmd.run_command
         cmd.error!
       end
 
       def reset(path, sha)
         puts "Resetting to #{sha}"
-        cmd = Mixlib::ShellOut.new("git reset --hard #{sha}", cwd: path)
+        cmd = Mixlib::ShellOut.new("git reset --hard #{sha}", :cwd => path)
         cmd.run_command
         cmd.error!
       end
 
       def merge(path, pr, ref)
         puts "Merging #{ref}"
-        cmd = Mixlib::ShellOut.new("git merge --no-ff -m 'The Sentinels Auto Testing PR ##{pr.number} SHA #{pr.head.sha}' #{ref}", cwd: path)
+        cmd = Mixlib::ShellOut.new("git merge --no-ff -m 'The Sentinels Auto Testing PR ##{pr.number} SHA #{pr.head.sha}' #{ref}", :cwd => path)
         cmd.run_command
         cmd.error!
       end
 
       def push(path, ref)
         puts "Pushing #{ref}"
-        cmd = Mixlib::ShellOut.new("git push --force origin #{ref}", env: env, cwd: path)
+        cmd = Mixlib::ShellOut.new("git push --force origin #{ref}", :env => env, :cwd => path)
         cmd.run_command
         cmd.error!
       end
@@ -98,7 +98,7 @@ module Sentinel
           pr.base.user.login,
           pr.base.repo.name,
           pr.number,
-          body: ":metal: I am testing your branch against #{pr.base.ref} before merging it. We do this to ensure that the master branch is never failing tests."
+          :body => ":metal: I am testing your branch against #{pr.base.ref} before merging it. We do this to ensure that the master branch is never failing tests."
         )
         Sentinel::Git.clone(pr.base.repo.ssh_url, path)
         Sentinel::Git.checkout(path, 'master')
@@ -111,7 +111,7 @@ module Sentinel
           pr.base.user.login,
           pr.base.repo.name,
           pr.number,
-          body: "Sorry; I had a problem testing this pull request. The error was:\n\n```ruby\n#{e}\n```\n\n![Oops](https://cloud.githubusercontent.com/assets/4304/17756537/583f4ba4-6495-11e6-97c8-0c22ceaf7e63.gif)"
+          :body => "Sorry; I had a problem testing this pull request. The error was:\n\n```ruby\n#{e}\n```\n\n![Oops](https://cloud.githubusercontent.com/assets/4304/17756537/583f4ba4-6495-11e6-97c8-0c22ceaf7e63.gif)"
         )
       end
     end
@@ -127,7 +127,7 @@ module Sentinel
           pr['repository']['owner']['login'],
           pr['repository']['name'],
           pr['pull_request']['number'],
-          body: "Thanks for the pull request! Here is what will happen next:\n 1. Your PR will be reviewed by the maintainers\n 2. If everything looks good, one of them will `approve` it, and your PR will be merged.\n\nThank you for contributing!"
+          :body => "Thanks for the pull request! Here is what will happen next:\n 1. Your PR will be reviewed by the maintainers\n 2. If everything looks good, one of them will `approve` it, and your PR will be merged.\n\nThank you for contributing!"
         )
       end
 
@@ -139,7 +139,7 @@ module Sentinel
             pr['repository']['owner']['login'],
             pr['repository']['name'],
             pr['issue']['number'],
-            body: "Hey, @#{pr['comment']['user']['login']} - you don't have permission to issue `#{command}` on this pull request.\n\n![Nope](https://cloud.githubusercontent.com/assets/4304/17754578/052ee70e-648a-11e6-9d30-c8c2b0eee26c.gif)"
+            :body => "Hey, @#{pr['comment']['user']['login']} - you don't have permission to issue `#{command}` on this pull request.\n\n![Nope](https://cloud.githubusercontent.com/assets/4304/17754578/052ee70e-648a-11e6-9d30-c8c2b0eee26c.gif)"
           )
           false
         end
@@ -164,7 +164,7 @@ module Sentinel
           pr['repository']['owner']['login'],
           pr['repository']['name'],
           pr['issue']['number'],
-          body: "Excellent @#{pr['comment']['user']['login']}! It always makes me feel nice when humans approve of one anothers work, no matter the consequences. I'm merging this PR now.\n\nI just want you and the contributor to answer me one question:\n\n![gif-keyboard-3280869874741411265](https://cloud.githubusercontent.com/assets/4304/17755674/1e577b82-6490-11e6-96b7-1663d283c824.gif)"
+          :body => "Excellent @#{pr['comment']['user']['login']}! It always makes me feel nice when humans approve of one anothers work, no matter the consequences. I'm merging this PR now.\n\nI just want you and the contributor to answer me one question:\n\n![gif-keyboard-3280869874741411265](https://cloud.githubusercontent.com/assets/4304/17755674/1e577b82-6490-11e6-96b7-1663d283c824.gif)"
         )
 
         merge(pr)
@@ -184,7 +184,7 @@ module Sentinel
             pr['base']['repo']['owner']['login'],
             pr['base']['repo']['name'],
             pr['number'],
-            commit_message: "Approved by: @#{approver}\nMerged by: The Sentinels"
+            :commit_message => "Approved by: @#{approver}\nMerged by: The Sentinels"
           )
 
         rescue => e
@@ -192,7 +192,7 @@ module Sentinel
             pr['repository']['owner']['login'],
             pr['repository']['name'],
             pr['issue']['number'],
-            body: "Sorry. I had a problem merging this pull request. The error was:\n\n```ruby\n#{e}\n```\n\n![Oops](https://cloud.githubusercontent.com/assets/4304/17756537/583f4ba4-6495-11e6-97c8-0c22ceaf7e63.gif)"
+            :body => "Sorry. I had a problem merging this pull request. The error was:\n\n```ruby\n#{e}\n```\n\n![Oops](https://cloud.githubusercontent.com/assets/4304/17756537/583f4ba4-6495-11e6-97c8-0c22ceaf7e63.gif)"
           )
         end
         begin
@@ -222,14 +222,14 @@ module Sentinel
           pr['repository']['owner']['login'],
           pr['repository']['name'],
           pr['issue']['number'],
-          commit_message: "Approved by: @#{pr['comment']['user']['login']}\nMerged by: The Sentinels"
+          :commit_message => "Approved by: @#{pr['comment']['user']['login']}\nMerged by: The Sentinels"
         )
       rescue => e
         Sentinel.github.issues.comments.create(
           pr['repository']['owner']['login'],
           pr['repository']['name'],
           pr['issue']['number'],
-          body: "Sorry @#{pr['comment']['user']['login']}; I had a problem merging this pull request. The error was:\n\n```ruby\n#{e}\n```\n\n![Oops](https://cloud.githubusercontent.com/assets/4304/17756537/583f4ba4-6495-11e6-97c8-0c22ceaf7e63.gif)"
+          :body => "Sorry @#{pr['comment']['user']['login']}; I had a problem merging this pull request. The error was:\n\n```ruby\n#{e}\n```\n\n![Oops](https://cloud.githubusercontent.com/assets/4304/17756537/583f4ba4-6495-11e6-97c8-0c22ceaf7e63.gif)"
         )
       end
     end
@@ -240,7 +240,7 @@ module Sentinel
     set :bind, '0.0.0.0'
 
     def verify_travis(payload, signature)
-      conn = Faraday.new(url: 'https://api.travis-ci.org') do |faraday|
+      conn = Faraday.new(:url => 'https://api.travis-ci.org') do |faraday|
         faraday.adapter Faraday.default_adapter
       end
       response = conn.get '/config'
@@ -283,7 +283,7 @@ module Sentinel
             build['repository']['owner_name'],
             build['repository']['name'],
             pr,
-            body: ":sparkling_heart: Travis CI [reports this PR passed](#{build['build_url']}).\n\nIt always makes me feel nice when humans approve of one anothers work. I'm merging this PR now.\n\nI just want you and the contributor to answer me one question:\n\n![gif-keyboard-3280869874741411265](https://cloud.githubusercontent.com/assets/4304/17755674/1e577b82-6490-11e6-96b7-1663d283c824.gif)"
+            :body => ":sparkling_heart: Travis CI [reports this PR passed](#{build['build_url']}).\n\nIt always makes me feel nice when humans approve of one anothers work. I'm merging this PR now.\n\nI just want you and the contributor to answer me one question:\n\n![gif-keyboard-3280869874741411265](https://cloud.githubusercontent.com/assets/4304/17755674/1e577b82-6490-11e6-96b7-1663d283c824.gif)"
           )
           real_pr = Sentinel.github.pull_requests.get(
             build['repository']['owner_name'],
@@ -296,14 +296,14 @@ module Sentinel
             build['repository']['owner_name'],
             build['repository']['name'],
             pr,
-            body: ":broken_heart: Travis CI reports [this PR failed to pass the test suite](#{build['build_url']}).\n\nThe next step is to examine the [job](#{build['build_url']}) and figure out why. If it is transient, you can try re-triggering the Travis CI Job - if it passes, this PR will be automatically merged. If it is not transient, you should fix the issue and update this pull request, and issue `approve` again. If you believe it will never pass, and you are feeling :godmode:, you can issue a `force` to merge this PR anyway."
+            :body => ":broken_heart: Travis CI reports [this PR failed to pass the test suite](#{build['build_url']}).\n\nThe next step is to examine the [job](#{build['build_url']}) and figure out why. If it is transient, you can try re-triggering the Travis CI Job - if it passes, this PR will be automatically merged. If it is not transient, you should fix the issue and update this pull request, and issue `approve` again. If you believe it will never pass, and you are feeling :godmode:, you can issue a `force` to merge this PR anyway."
           )
         elsif build['status'].nil? && build['result'].nil? && build['state'] == 'started'
           Sentinel.github.issues.comments.create(
             build['repository']['owner_name'],
             build['repository']['name'],
             pr,
-            body: ":neckbeard: Travis CI has [started testing this PR](#{build['build_url']})."
+            :body => ":neckbeard: Travis CI has [started testing this PR](#{build['build_url']})."
           )
         end
       else
@@ -334,9 +334,9 @@ module Sentinel
               pr['repository']['owner']['login'],
               pr['repository']['name'],
               commit['sha'],
-              context: 'DCO',
-              state: 'failure',
-              description: 'This commit does not have a DCO Signed-off-by line'
+              :context => 'DCO',
+              :state => 'failure',
+              :description => 'This commit does not have a DCO Signed-off-by line'
             )
           else
             puts "Flagging SHA #{commit['sha']} as succeeded; has DCO"
@@ -344,9 +344,9 @@ module Sentinel
               pr['repository']['owner']['login'],
               pr['repository']['name'],
               commit['sha'],
-              context: 'DCO',
-              state: 'success',
-              description: 'This commit has a DCO Signed-off-by line'
+              :context => 'DCO',
+              :state => 'success',
+              :description => 'This commit has a DCO Signed-off-by line'
             )
           end
         end
@@ -396,4 +396,4 @@ CACHE = '/hab/svc/sentinel/data'.freeze
 
 Dir.mkdir(CACHE, 0700) unless Dir.exist?(CACHE)
 
-Sentinel::Processor.supervise(as: :processor)
+Sentinel::Processor.supervise(:as => :processor)
