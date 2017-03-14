@@ -241,8 +241,8 @@ module Sentinel
       end
       # The deploy_site method has no action based in GH other than piggybacking on the
       # authenticated? method. In the future this should get moved.
-      def deploy_site(issue)
-        return unless authenticated?(issue, "deploy")
+      def deploy_site(pr)
+        return unless authenticated?(pr, "deploy")
 
         real_pr = Sentinel.github.pull_requests.get(
            pr["repository"]["owner"]["login"],
