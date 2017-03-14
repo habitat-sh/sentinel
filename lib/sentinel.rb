@@ -113,6 +113,33 @@ module Sentinel
         )
       end
     end
+
+    def deploy_acceptance(pr)
+      name = pr.base.repo.name
+      path = File.join(CACHE, name)
+      begin
+        Sentinel.github.issues.comments.create(
+          pr.base.user.login,
+          pr.base.repo.name,
+          pr.number,
+          body: ":metal: I am sending your branch against #{pr.base.ref} to our acceptance environment."
+        )
+        Sentinel::Git.clone(pr.base.repo.ssh_url, path)
+        Sentinel::Git.checkout(path, "master")
+        Sentinel::Git.fetch(path, pr.number)
+        Sentinel::Git.branch(path, "acceptance_deploy/#{pr.base.user.login}/#{pr.base.repo.name}/#{pr.number}")
+        Sentinel::Git.reset(path, pr.merge_commit_sha)
+        Sentinel::Git.push(path, "acceptance_deploy/#{pr.base.user.login}/#{pr.base.repo.name}/#{pr.number}")
+      rescue => e
+        Sentinel.github.issues.comments.create(
+          pr.base.user.login,
+          pr.base.repo.name,
+          pr.number,
+          body: "Sorry; I had a problem deploying this change to acceptance. The error was:\n\n```ruby\n#{e}\n```\n\n![Oops](https://cloud.githubusercontent.com/assets/4304/17756537/583f4ba4-6495-11e6-97c8-0c22ceaf7e63.gif)"
+        )
+      end
+    end
+
   end
 
   class Hub
@@ -212,6 +239,19 @@ module Sentinel
           puts "Failed to delete branches"
         end
       end
+      # The deploy_site method has no action based in GH other than piggybacking on the
+      # authenticated? method. In the future this should get moved.
+      def deploy_site(issue)
+        return unless authenticated?(issue, "deploy")
+
+        real_pr = Sentinel.github.pull_requests.get(
+           pr["repository"]["owner"]["login"],
+           pr["repository"]["name"],
+           pr["issue"]["number"]
+        )
+
+        Celluloid::Actor[:processor].deploy_acceptance(real_pr)
+      end
 
       def merge(pr)
         begin
@@ -269,46 +309,73 @@ module Sentinel
 
       if build['type'] == "pull_request"
         puts "Nothing to do on a PR travis job"
-        return "Nothing to do on PR" 
+        return "Nothing to do on PR"
       end
 
-      build["branch"] =~ /^sentinel\/#{build["repository"]["owner_name"]}\/#{build["repository"]["name"]}\/(\d+)/
-      if $1
-        pr = $1
-        puts "I have #{pr}"
-        if build["result"] == 0
-         Sentinel.github.issues.comments.create(
-           build["repository"]["owner_name"],
-           build["repository"]["name"],
-           pr,
-           body: ":sparkling_heart: Travis CI [reports this PR passed](#{build["build_url"]}).\n\nIt always makes me feel nice when humans approve of one anothers work. I'm merging this PR now.\n\nI just want you and the contributor to answer me one question:\n\n![gif-keyboard-3280869874741411265](https://cloud.githubusercontent.com/assets/4304/17755674/1e577b82-6490-11e6-96b7-1663d283c824.gif)"
-         )
-         real_pr = Sentinel.github.pull_requests.get(
-           build["repository"]["owner_name"],
-           build["repository"]["name"],
-           pr
-         )
-         Hub.merge_real_pr(real_pr)
-        elsif build["result"] == 1
-          Sentinel.github.issues.comments.create(
-            build["repository"]["owner_name"],
-            build["repository"]["name"],
-            pr,
-            body: ":broken_heart: Travis CI reports [this PR failed to pass the test suite](#{build["build_url"]}).\n\nThe next step is to examine the [job](#{build["build_url"]}) and figure out why. If it is transient, you can try re-triggering the Travis CI Job - if it passes, this PR will be automatically merged. If it is not transient, you should fix the issue and update this pull request, and issue `approve` again. If you believe it will never pass, and you are feeling :godmode:, you can issue a `force` to merge this PR anyway."
-          )
-        elsif build["status"] == nil && build["result"] == nil && build["state"] = "started"
-          Sentinel.github.issues.comments.create(
-            build["repository"]["owner_name"],
-            build["repository"]["name"],
-            pr,
-            body: ":neckbeard: Travis CI has [started testing this PR](#{build["build_url"]})."
-          )
+      case build["branch"]
+      when /^acceptance_deploy\/#{build["repository"]["owner_name"]}\/#{build["repository"]["name"]}\/(\d+)/
+        if $1
+          pr = $1
+          puts "I have #{pr}"
+          if build["result"] == 0
+           Sentinel.github.issues.comments.create(
+             build["repository"]["owner_name"],
+             build["repository"]["name"],
+             pr,
+             body: ":sparkling_heart: Travis CI [reports acceptance has been deployed](#{build["build_url"]}).\n\nI love new and shiny websites!\n\nI just want you and the contributor to answer me one question:\n\n![gif-keyboard-3280869874741411265](https://cloud.githubusercontent.com/assets/4304/17755674/1e577b82-6490-11e6-96b7-1663d283c824.gif)"
+           )
+         elsif build["result"] == 1
+           Sentinel.github.issues.comments.create(
+             build["repository"]["owner_name"],
+             build["repository"]["name"],
+             pr,
+             body: ":broken_heart: Travis CI reports [this PR failed to deploy](#{build["build_url"]}).\n\nThe next step is to examine the [job](#{build["build_url"]}) and figure out why. If it is transient, you can try re-triggering the Travis CI Job - if it passes, this PR will be automatically merged. If it is not transient, you should fix the issue and update this pull request, and issue `approve` again. If you believe it will never pass, and you are feeling :godmode:, you can issue a `force` to merge this PR anyway."
+           )
+         elsif build["status"] == nil && build["result"] == nil && build["state"] = "started"
+           Sentinel.github.issues.comments.create(
+             build["repository"]["owner_name"],
+             build["repository"]["name"],
+             pr,
+             body: ":neckbeard: Travis CI has [started the deployment of acceptance](#{build["build_url"]})."
+           )
+         end
+      when /^sentinel\/#{build["repository"]["owner_name"]}\/#{build["repository"]["name"]}\/(\d+)/
+        if $1
+          pr = $1
+          puts "I have #{pr}"
+          if build["result"] == 0
+           Sentinel.github.issues.comments.create(
+             build["repository"]["owner_name"],
+             build["repository"]["name"],
+             pr,
+             body: ":sparkling_heart: Travis CI [reports this PR passed](#{build["build_url"]}).\n\nIt always makes me feel nice when humans approve of one anothers work. I'm merging this PR now.\n\nI just want you and the contributor to answer me one question:\n\n![gif-keyboard-3280869874741411265](https://cloud.githubusercontent.com/assets/4304/17755674/1e577b82-6490-11e6-96b7-1663d283c824.gif)"
+           )
+           real_pr = Sentinel.github.pull_requests.get(
+             build["repository"]["owner_name"],
+             build["repository"]["name"],
+             pr
+           )
+           Hub.merge_real_pr(real_pr)
+          elsif build["result"] == 1
+            Sentinel.github.issues.comments.create(
+              build["repository"]["owner_name"],
+              build["repository"]["name"],
+              pr,
+              body: ":broken_heart: Travis CI reports [this PR failed to pass the test suite](#{build["build_url"]}).\n\nThe next step is to examine the [job](#{build["build_url"]}) and figure out why. If it is transient, you can try re-triggering the Travis CI Job - if it passes, this PR will be automatically merged. If it is not transient, you should fix the issue and update this pull request, and issue `approve` again. If you believe it will never pass, and you are feeling :godmode:, you can issue a `force` to merge this PR anyway."
+            )
+          elsif build["status"] == nil && build["result"] == nil && build["state"] = "started"
+            Sentinel.github.issues.comments.create(
+              build["repository"]["owner_name"],
+              build["repository"]["name"],
+              pr,
+              body: ":neckbeard: Travis CI has [started testing this PR](#{build["build_url"]})."
+            )
+          end
+        else
+          puts "No PR number in #{build["branch"]}; nothing to do"
+          return "No PR number in #{build["branch"]}; nothing to do"
         end
-      else
-        puts "No PR number in #{build["branch"]}; nothing to do"
-        return "No PR number in #{build["branch"]}; nothing to do"
       end
-
       "Please Drive Through!"
     end
 
@@ -357,6 +424,8 @@ module Sentinel
           Hub.force_pr(pr)
         elsif pr["comment"]["body"] =~ /@thesentinels approve/
           Hub.approve_pr(pr)
+        elsif pr["comment"]["body"] =~ /@thesentinels acceptance/
+          Hub.deploy_site(pr)
         end
       end
 
@@ -395,4 +464,3 @@ CACHE = "/hab/svc/sentinel/data"
 Dir.mkdir(CACHE, 0700) unless Dir.exists?(CACHE)
 
 Sentinel::Processor.supervise(:as => :processor)
-
