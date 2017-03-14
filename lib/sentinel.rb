@@ -324,21 +324,25 @@ module Sentinel
              pr,
              body: ":sparkling_heart: Travis CI [reports acceptance has been deployed](#{build["build_url"]}).\n\nI love new and shiny websites!\n\nI just want you and the contributor to answer me one question:\n\n![gif-keyboard-3280869874741411265](https://cloud.githubusercontent.com/assets/4304/17755674/1e577b82-6490-11e6-96b7-1663d283c824.gif)"
            )
-         elsif build["result"] == 1
-           Sentinel.github.issues.comments.create(
-             build["repository"]["owner_name"],
-             build["repository"]["name"],
-             pr,
-             body: ":broken_heart: Travis CI reports [this PR failed to deploy](#{build["build_url"]}).\n\nThe next step is to examine the [job](#{build["build_url"]}) and figure out why. If it is transient, you can try re-triggering the Travis CI Job - if it passes, this PR will be automatically merged. If it is not transient, you should fix the issue and update this pull request, and issue `approve` again. If you believe it will never pass, and you are feeling :godmode:, you can issue a `force` to merge this PR anyway."
-           )
-         elsif build["status"] == nil && build["result"] == nil && build["state"] = "started"
-           Sentinel.github.issues.comments.create(
-             build["repository"]["owner_name"],
-             build["repository"]["name"],
-             pr,
-             body: ":neckbeard: Travis CI has [started the deployment of acceptance](#{build["build_url"]})."
-           )
-         end
+          elsif build["result"] == 1
+            Sentinel.github.issues.comments.create(
+              build["repository"]["owner_name"],
+              build["repository"]["name"],
+              pr,
+              body: ":broken_heart: Travis CI reports [this PR failed to deploy](#{build["build_url"]}).\n\nThe next step is to examine the [job](#{build["build_url"]}) and figure out why. If it is transient, you can try re-triggering the Travis CI Job - if it passes, this PR will be automatically merged. If it is not transient, you should fix the issue and update this pull request, and issue `approve` again. If you believe it will never pass, and you are feeling :godmode:, you can issue a `force` to merge this PR anyway."
+            )
+          elsif build["status"] == nil && build["result"] == nil && build["state"] = "started"
+            Sentinel.github.issues.comments.create(
+              build["repository"]["owner_name"],
+              build["repository"]["name"],
+              pr,
+              body: ":neckbeard: Travis CI has [started the deployment of acceptance](#{build["build_url"]})."
+            )
+          end
+        else
+          puts "No PR number in #{build["branch"]}; nothing to do"
+          return "No PR number in #{build["branch"]}; nothing to do"
+        end
       when /^sentinel\/#{build["repository"]["owner_name"]}\/#{build["repository"]["name"]}\/(\d+)/
         if $1
           pr = $1
