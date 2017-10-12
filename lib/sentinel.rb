@@ -397,27 +397,41 @@ module Sentinel
           pr["repository"]["name"],
           pr["pull_request"]["number"]
         ).each do |commit|
-          if commit[:commit][:message] !~ /Signed-off-by: .+ <.+>/
-            puts "Flagging SHA #{commit["sha"]} as failed; no DCO"
-            Sentinel.github.repos.statuses.create(
-              pr["repository"]["owner"]["login"],
-              pr["repository"]["name"],
-              commit["sha"],
-              context: "DCO",
-              state: "failure",
-              description: "This commit does not have a DCO Signed-off-by line"
-            )
-          else
+          commit_status = {}
+          case commit[:commit][:message]
+          when /Signed[-|\s]off[-|\s]by: .+ <.+>/i
             puts "Flagging SHA #{commit["sha"]} as succeeded; has DCO"
-            Sentinel.github.repos.statuses.create(
-              pr["repository"]["owner"]["login"],
-              pr["repository"]["name"],
-              commit["sha"],
-              context: "DCO",
+            commit_status = {
               state: "success",
               description: "This commit has a DCO Signed-off-by line"
-            )
+            }
+          when /\ARevert\s.*^This reverts commit/m
+            puts "Flagging SHA #{commit["sha"]} as succeeded; it's a revert commit"
+            commit_status = {
+              state: "success",
+              description: "This commit is a revert commit"
+            }
+          when /\AMerge (pull request|branch)/
+            puts "Flagging SHA #{commit["sha"]} as succeeded; it's a merge commit"
+            commit_status = {
+              state: "success",
+              description: "This commit is a merge commit"
+            }
+          else
+            puts "Flagging SHA #{commit["sha"]} as failed; no DCO"
+            commit_status = {
+              state: "failure",
+              description: "This commit does not have a DCO Signed-off-by line"
+            }
           end
+          Sentinel.github.repos.statuses.create(
+            pr["repository"]["owner"]["login"],
+            pr["repository"]["name"],
+            commit["sha"],
+            context: "DCO",
+            state: commit_status[:state],
+            description: commit_status[:description]
+          )
         end
       end
 
